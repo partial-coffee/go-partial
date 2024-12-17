@@ -54,6 +54,7 @@ type (
 		parent            *Partial
 		request           *http.Request
 		swapOOB           bool
+		alwaysSwapOOB     bool
 		fs                fs.FS
 		logger            Logger
 		connector         connector.Connector
@@ -189,6 +190,11 @@ func (p *Partial) MergeData(data map[string]any, override bool) *Partial {
 
 		p.data[k] = v
 	}
+	return p
+}
+
+func (p *Partial) SetAlwaysSwapOOB(alwaysSwapOOB bool) *Partial {
+	p.alwaysSwapOOB = alwaysSwapOOB
 	return p
 }
 
@@ -729,19 +735,21 @@ func (p *Partial) renderSelf(ctx context.Context, r *http.Request) (template.HTM
 	return template.HTML(buf.String()), nil
 }
 
-func (p *Partial) renderOOBChildren(ctx context.Context, r *http.Request, swapOOB bool) (template.HTML, error) {
+func (p *Partial) renderOOBChildren(ctx context.Context, r *http.Request, swapOOB bool, isAncestor bool) (template.HTML, error) {
 	var out template.HTML
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	for id := range p.oobChildren {
 		if child, ok := p.children[id]; ok {
-			child.swapOOB = swapOOB
-			childData, err := child.renderSelf(ctx, r)
-			if err != nil {
-				return "", fmt.Errorf("error rendering OOB child '%s': %w", id, err)
+			if (isAncestor && child.alwaysSwapOOB) || !isAncestor {
+				child.swapOOB = swapOOB
+				childData, err := child.renderSelf(ctx, r)
+				if err != nil {
+					return "", fmt.Errorf("error rendering OOB child '%s': %w", id, err)
+				}
+				out += childData
 			}
-			out += childData
 		}
 	}
 	return out, nil
@@ -751,7 +759,7 @@ func (p *Partial) renderAllAncestorOOBChildren(ctx context.Context, r *http.Requ
 	var out template.HTML
 	ancestor := p.parent
 	for ancestor != nil {
-		chunk, err := ancestor.renderOOBChildren(ctx, r, swapOOB)
+		chunk, err := ancestor.renderOOBChildren(ctx, r, swapOOB, true)
 		if err != nil {
 			return "", fmt.Errorf("error rendering OOB children from ancestor '%s': %w", ancestor.id, err)
 		}
