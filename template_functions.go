@@ -52,6 +52,23 @@ var DefaultTemplateFuncMap = template.FuncMap{
 	"debug": debug,
 }
 
+func AddFunc(name string, f any) error {
+	if _, ok := protectedFunctionNames[name]; ok {
+		return fmt.Errorf("function name [%s] is protected and cannot be overwritten", name)
+	}
+
+	DefaultTemplateFuncMap[name] = f
+	return nil
+}
+
+func copyFuncMap() template.FuncMap {
+	funcMap := make(template.FuncMap)
+	for k, v := range DefaultTemplateFuncMap {
+		funcMap[k] = v
+	}
+	return funcMap
+}
+
 func safeHTML(s string) template.HTML {
 	return template.HTML(s)
 }

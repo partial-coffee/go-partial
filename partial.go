@@ -103,7 +103,7 @@ func New(templates ...string) *Partial {
 	return &Partial{
 		id:                "root",
 		templates:         templates,
-		combinedFunctions: make(template.FuncMap),
+		combinedFunctions: copyFuncMap(),
 		data:              make(map[string]any),
 		layoutData:        make(map[string]any),
 		globalData:        make(map[string]any),
