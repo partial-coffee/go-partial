@@ -686,3 +686,37 @@ func TestMergeFuncMap(t *testing.T) {
 		t.Error("child should not be overwritten in FuncMap")
 	}
 }
+
+func TestDefaultLocalizer_Locale(t *testing.T) {
+	svc := NewService(&Config{})
+
+	var handleRequest = func(w http.ResponseWriter, r *http.Request) {
+		fsys := &InMemoryFS{
+			Files: map[string]string{
+				"templates/index.html": `<html><body>{{ .Loc.Locale }}</body></html>`,
+			},
+		}
+
+		p := New("templates/index.html").ID("root")
+
+		out, err := svc.NewLayout().FS(fsys).Set(p).RenderWithRequest(r.Context(), r)
+		if err != nil {
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+
+		_, _ = w.Write([]byte(out))
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+
+		handleRequest(response, request)
+
+		expected := "<html><body>en_US</body></html>"
+		if response.Body.String() != expected {
+			t.Errorf("expected %s, got %s", expected, response.Body.String())
+		}
+	})
+}
