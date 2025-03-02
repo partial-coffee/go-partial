@@ -92,6 +92,8 @@ type (
 		Service map[string]any
 		// LayoutData contains data specific to the service
 		Layout map[string]any
+		// Loc contains the localizer
+		Loc Localizer
 	}
 
 	// GlobalData represents the global data available to all partials.
@@ -705,6 +707,7 @@ func (p *Partial) renderSelf(ctx context.Context, r *http.Request) (template.HTM
 		Data:    p.data,
 		Service: p.getGlobalData(),
 		Layout:  p.getLayoutData(),
+		Loc:     getLocalizer(ctx),
 	}
 
 	if p.action != nil {
@@ -742,7 +745,7 @@ func (p *Partial) renderOOBChildren(ctx context.Context, r *http.Request, swapOO
 
 	for id := range p.oobChildren {
 		if child, ok := p.children[id]; ok {
-			if (isAncestor && child.alwaysSwapOOB) || !isAncestor {
+			if isAncestor || child.alwaysSwapOOB {
 				child.swapOOB = swapOOB
 				childData, err := child.renderSelf(ctx, r)
 				if err != nil {
