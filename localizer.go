@@ -8,7 +8,7 @@ var (
 )
 
 type Localizer interface {
-	Locale() string
+	GetLocale() string
 }
 
 func getLocalizer(ctx context.Context) Localizer {
@@ -22,6 +22,6 @@ type defaultLocalizer struct {
 	locale string
 }
 
-func (d *defaultLocalizer) Locale() string {
+func (d *defaultLocalizer) GetLocale() string {
 	return d.locale
 }

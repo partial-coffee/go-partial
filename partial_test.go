@@ -693,7 +693,7 @@ func TestDefaultLocalizer_Locale(t *testing.T) {
 	var handleRequest = func(w http.ResponseWriter, r *http.Request) {
 		fsys := &InMemoryFS{
 			Files: map[string]string{
-				"templates/index.html": `<html><body>{{ .Loc.Locale }}</body></html>`,
+				"templates/index.html": `<html><body>{{ .Loc.GetLocale }}</body></html>`,
 			},
 		}
 
