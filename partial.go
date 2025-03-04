@@ -94,6 +94,8 @@ type (
 		Layout map[string]any
 		// Loc contains the localizer
 		Loc Localizer
+		// Csrf contains the CSRF token
+		Csrf CsrfToken
 	}
 
 	// GlobalData represents the global data available to all partials.
@@ -708,6 +710,7 @@ func (p *Partial) renderSelf(ctx context.Context, r *http.Request) (template.HTM
 		Service: p.getGlobalData(),
 		Layout:  p.getLayoutData(),
 		Loc:     getLocalizer(ctx),
+		Csrf:    getCsrfToken(ctx),
 	}
 
 	if p.action != nil {

@@ -720,3 +720,107 @@ func TestDefaultLocalizer_Locale(t *testing.T) {
 		}
 	})
 }
+
+func TestDefaultCsrf_Token(t *testing.T) {
+	svc := NewService(&Config{})
+
+	var handleRequest = func(w http.ResponseWriter, r *http.Request) {
+		fsys := &InMemoryFS{
+			Files: map[string]string{
+				"templates/index.html": `<html><body>{{ .Csrf.Token .Ctx }}</body></html>`,
+			},
+		}
+
+		p := New("templates/index.html").ID("root")
+
+		out, err := svc.NewLayout().FS(fsys).Set(p).RenderWithRequest(r.Context(), r)
+		if err != nil {
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+
+		_, _ = w.Write([]byte(out))
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+
+		handleRequest(response, request)
+
+		expected := "<html><body>invalid-token-"
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Errorf("expected %s, got %s", expected, response.Body.String())
+		}
+	})
+
+	t.Run("test csrf", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+
+		// Set the CSRF token in the request context
+		ctx := context.WithValue(request.Context(), DefaultCsrfToken, &testCsrf{
+			token: "random-1234567890",
+			key:   DefaultCsrfToken,
+		})
+
+		handleRequest(response, request.WithContext(ctx))
+
+		expected := "<html><body>random-1234567890</body></html>"
+
+		if response.Body.String() != expected {
+			t.Errorf("expected %s, got %s", expected, response.Body.String())
+		}
+	})
+}
+
+type testCsrf struct {
+	token string
+	key   string
+}
+
+func (d *testCsrf) Token(ctx context.Context) string {
+	if token, ok := ctx.Value(DefaultCsrfToken).(string); ok {
+		return token
+	}
+
+	return d.token
+}
+
+func (d *testCsrf) Key() string {
+	return d.key
+}
+
+func TestDefaultCsrf_Key(t *testing.T) {
+	svc := NewService(&Config{})
+
+	var handleRequest = func(w http.ResponseWriter, r *http.Request) {
+		fsys := &InMemoryFS{
+			Files: map[string]string{
+				"templates/index.html": `<html><body>{{ .Csrf.Key }}</body></html>`,
+			},
+		}
+
+		p := New("templates/index.html").ID("root")
+
+		out, err := svc.NewLayout().FS(fsys).Set(p).RenderWithRequest(r.Context(), r)
+		if err != nil {
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+
+		_, _ = w.Write([]byte(out))
+	}
+
+	t.Run("basic", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/", nil)
+		response := httptest.NewRecorder()
+
+		handleRequest(response, request)
+
+		expected := "<html><body>X-CSRF-Token</body></html>"
+		if response.Body.String() != expected {
+			t.Errorf("expected %s, got %s", expected, response.Body.String())
+		}
+	})
+}
