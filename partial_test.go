@@ -112,6 +112,46 @@ func TestRequestBasic(t *testing.T) {
 	})
 }
 
+func TestWithGlobalData(t *testing.T) {
+	svc := NewService(&Config{})
+
+	var handleRequest = func(w http.ResponseWriter, r *http.Request) {
+		fsys := &InMemoryFS{
+			Files: map[string]string{
+				"templates/index.html":   `<html><body>{{ child "content" }}</body></html>`,
+				"templates/content.html": "<div>{{ .Global.Text }}</div>",
+			},
+		}
+
+		p := New("templates/index.html").ID("root")
+		p.SetGlobalData(map[string]any{
+			"Text": "Welcome to the home page",
+		})
+
+		// content
+		content := New("templates/content.html").ID("content")
+		p.With(content)
+
+		out, err := svc.NewLayout().FS(fsys).Set(p).RenderWithRequest(r.Context(), r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, _ = w.Write([]byte(out))
+	}
+
+	request, _ := http.NewRequest(http.MethodGet, "/", nil)
+	response := httptest.NewRecorder()
+
+	handleRequest(response, request)
+
+	expected := "<html><body><div>Welcome to the home page</div></body></html>"
+	if response.Body.String() != expected {
+		t.Errorf("expected %s, got %s", expected, response.Body.String())
+	}
+}
+
 func TestRequestWrap(t *testing.T) {
 	svc := NewService(&Config{})
 
