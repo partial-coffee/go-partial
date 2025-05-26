@@ -237,7 +237,7 @@ func (l *Layout) applyConfigToPartial(p *Partial) {
 		p.logger = l.service.config.Logger
 	}
 	p.useCache = l.service.config.UseCache
-	p.globalData = l.service.data
+	p.serviceData = l.service.data
 	p.layoutData = l.data
 	p.request = l.request
 }

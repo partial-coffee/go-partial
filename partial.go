@@ -61,9 +61,11 @@ type (
 		useCache          bool
 		templates         []string
 		combinedFunctions template.FuncMap
+		basePath          string
 		data              map[string]any
 		layoutData        map[string]any
 		globalData        map[string]any
+		serviceData       map[string]any
 		responseHeaders   map[string]string
 		mu                sync.RWMutex
 		children          map[string]*Partial
@@ -92,10 +94,14 @@ type (
 		Service map[string]any
 		// LayoutData contains data specific to the service
 		Layout map[string]any
+		// GlobalData contains global data available to all partials
+		Global map[string]any
 		// Loc contains the localizer
 		Loc Localizer
 		// Csrf contains the CSRF token
 		Csrf CsrfToken
+		// BasePath is the base path of the partial
+		BasePath string
 	}
 
 	// GlobalData represents the global data available to all partials.
@@ -111,6 +117,7 @@ func New(templates ...string) *Partial {
 		data:              make(map[string]any),
 		layoutData:        make(map[string]any),
 		globalData:        make(map[string]any),
+		serviceData:       make(map[string]any),
 		children:          make(map[string]*Partial),
 		oobChildren:       make(map[string]struct{}),
 		fs:                os.DirFS("./"),
@@ -139,8 +146,23 @@ func (p *Partial) Reset() *Partial {
 	p.data = make(map[string]any)
 	p.layoutData = make(map[string]any)
 	p.globalData = make(map[string]any)
+	p.serviceData = make(map[string]any)
 	p.children = make(map[string]*Partial)
 	p.oobChildren = make(map[string]struct{})
+
+	return p
+}
+
+// SetBasePath sets the base path for the partial.
+func (p *Partial) SetBasePath(basePath string) *Partial {
+	if p == nil {
+		return nil
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.basePath = basePath
 
 	return p
 }
@@ -274,6 +296,7 @@ func (p *Partial) With(child *Partial) *Partial {
 
 	p.children[child.id] = child
 	p.children[child.id].globalData = p.globalData
+	p.children[child.id].serviceData = p.serviceData
 	p.children[child.id].parent = p
 
 	return p
@@ -429,6 +452,15 @@ func (p *Partial) getFuncs(data *Data) template.FuncMap {
 		return strings.Contains(data.URL.Path, current)
 	}
 
+	funcs["joinPath"] = func(parts ...string) string {
+		return path.Join(parts...)
+	}
+
+	funcs["urlPath"] = func(base string, parts ...string) template.URL {
+		allParts := append([]string{base}, parts...)
+		return template.URL(path.Join(allParts...))
+	}
+
 	// Target-related (prefixed with "requestTarget")
 	funcs["requestTargetHeader"] = func() string {
 		return p.getConnector().GetTargetHeader()
@@ -518,6 +550,17 @@ func (p *Partial) getLayoutData() map[string]any {
 		return layoutData
 	}
 	return p.layoutData
+}
+
+func (p *Partial) getServiceData() map[string]any {
+	if p.parent != nil {
+		serviceData := p.parent.getServiceData()
+		for k, v := range p.serviceData {
+			serviceData[k] = v
+		}
+		return serviceData
+	}
+	return p.serviceData
 }
 
 func (p *Partial) getConnector() connector.Connector {
@@ -703,14 +746,16 @@ func (p *Partial) renderSelf(ctx context.Context, r *http.Request) (template.HTM
 	}
 
 	data := &Data{
-		URL:     currentURL,
-		Request: r,
-		Ctx:     ctx,
-		Data:    p.data,
-		Service: p.getGlobalData(),
-		Layout:  p.getLayoutData(),
-		Loc:     getLocalizer(ctx),
-		Csrf:    getCsrfToken(ctx),
+		URL:      currentURL,
+		BasePath: p.basePath,
+		Request:  r,
+		Ctx:      ctx,
+		Data:     p.data,
+		Global:   p.getGlobalData(),
+		Service:  p.getServiceData(),
+		Layout:   p.getLayoutData(),
+		Loc:      getLocalizer(ctx),
+		Csrf:     getCsrfToken(ctx),
 	}
 
 	if p.action != nil {
@@ -824,9 +869,11 @@ func (p *Partial) clone() *Partial {
 		selection:         p.selection,
 		templates:         append([]string{}, p.templates...), // Copy the slice
 		combinedFunctions: make(template.FuncMap),
+		basePath:          p.basePath,
 		data:              make(map[string]any),
 		layoutData:        make(map[string]any),
 		globalData:        make(map[string]any),
+		serviceData:       make(map[string]any),
 		children:          make(map[string]*Partial),
 		oobChildren:       make(map[string]struct{}),
 	}
@@ -846,6 +893,10 @@ func (p *Partial) clone() *Partial {
 
 	for k, v := range p.globalData {
 		clone.globalData[k] = v
+	}
+
+	for k, v := range p.serviceData {
+		clone.serviceData[k] = v
 	}
 
 	// Copy the children map
