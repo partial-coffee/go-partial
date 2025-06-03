@@ -271,7 +271,8 @@ func (p *Partial) UseCache(useCache bool) *Partial {
 	return p
 }
 
-// SetGlobalData sets the global data for the partial.
+// SetGlobalData is used to set the global data.
+// Deprecated: this method is deprecated, use SetData instead.
 func (p *Partial) SetGlobalData(data map[string]any) *Partial {
 	p.globalData = data
 	return p
@@ -530,15 +531,28 @@ func (p *Partial) getFuncs(data *Data) template.FuncMap {
 	return funcs
 }
 
+// global data is a map that contains the parents data
 func (p *Partial) getGlobalData() map[string]any {
 	if p.parent != nil {
-		globalData := p.parent.getGlobalData()
-		for k, v := range p.globalData {
-			globalData[k] = v
-		}
-		return globalData
+		return p.parent.getGlobalDataMergedWithOwn()
 	}
 	return p.globalData
+}
+
+// getGlobalDataMergedWithOwn merges the parent's global data with this partial's data
+func (p *Partial) getGlobalDataMergedWithOwn() map[string]any {
+	parentGlobal := map[string]any{}
+	if p.parent != nil {
+		parentGlobal = p.parent.getGlobalDataMergedWithOwn()
+	}
+	merged := make(map[string]any, len(parentGlobal))
+	for k, v := range parentGlobal {
+		merged[k] = v
+	}
+	for k, v := range p.data {
+		merged[k] = v
+	}
+	return merged
 }
 
 func (p *Partial) getLayoutData() map[string]any {
@@ -561,6 +575,13 @@ func (p *Partial) getServiceData() map[string]any {
 		return serviceData
 	}
 	return p.serviceData
+}
+
+func (p *Partial) getBasePath() string {
+	if p.parent != nil {
+		return p.parent.getBasePath()
+	}
+	return p.basePath
 }
 
 func (p *Partial) getConnector() connector.Connector {
@@ -747,7 +768,7 @@ func (p *Partial) renderSelf(ctx context.Context, r *http.Request) (template.HTM
 
 	data := &Data{
 		URL:      currentURL,
-		BasePath: p.basePath,
+		BasePath: p.getBasePath(),
 		Request:  r,
 		Ctx:      ctx,
 		Data:     p.data,
