@@ -124,7 +124,7 @@ func TestWithGlobalData(t *testing.T) {
 		}
 
 		p := New("templates/index.html").ID("root")
-		p.SetGlobalData(map[string]any{
+		p.SetData(map[string]any{
 			"Text": "Welcome to the home page",
 		})
 
@@ -863,4 +863,24 @@ func TestDefaultCsrf_Key(t *testing.T) {
 			t.Errorf("expected %s, got %s", expected, response.Body.String())
 		}
 	})
+}
+
+func TestGetGlobalDataRecursive(t *testing.T) {
+	root := New()
+	root.SetData(map[string]any{"a": 1, "b": 2})
+
+	child := New()
+	child.SetData(map[string]any{"b": 3, "c": 4})
+	child.SetParent(root)
+
+	grandchild := New()
+	grandchild.SetData(map[string]any{"c": 5, "d": 6})
+	grandchild.SetParent(child)
+
+	child.With(grandchild)
+	root.With(child)
+
+	if len(grandchild.getGlobalData()) != 3 {
+		t.Errorf("expected 3 results")
+	}
 }
