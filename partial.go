@@ -579,8 +579,12 @@ func (p *Partial) getServiceData() map[string]any {
 
 func (p *Partial) getBasePath() string {
 	if p.parent != nil {
-		return p.parent.getBasePath()
+		bp := p.parent.getBasePath()
+		if bp != "" {
+			return bp
+		}
 	}
+
 	return p.basePath
 }
 
