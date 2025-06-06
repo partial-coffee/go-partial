@@ -201,6 +201,22 @@ func (p *Partial) GetResponseHeaders() map[string]string {
 	return p.responseHeaders
 }
 
+func (p *Partial) GetBasePath() string {
+	if p == nil {
+		return ""
+	}
+
+	if p.basePath != "" {
+		return p.basePath
+	}
+
+	if p.parent != nil {
+		return p.parent.GetBasePath()
+	}
+
+	return ""
+}
+
 // SetConnector sets the connector for the partial.
 func (p *Partial) SetConnector(connector connector.Connector) *Partial {
 	p.connector = connector

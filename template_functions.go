@@ -34,6 +34,7 @@ var DefaultTemplateFuncMap = template.FuncMap{
 	"equalFold":   strings.EqualFold,
 	"urlencode":   url.QueryEscape,
 	"urldecode":   url.QueryUnescape,
+	"safeURL":     safeURL,
 	// Time functions
 
 	"now":        time.Now,
@@ -47,6 +48,10 @@ var DefaultTemplateFuncMap = template.FuncMap{
 	// Map functions
 	"hasKey": hasKey,
 	"keys":   keys,
+	"dict":   dict,
+
+	"inc": inc,
+	"dec": dec,
 
 	// Debug functions
 	"debug": debug,
@@ -152,6 +157,122 @@ func keys(m map[string]any) []string {
 	return out
 }
 
+func safeURL(s string) template.URL {
+	if s == "" {
+		return template.URL("")
+	}
+	// Ensure the URL is properly escaped
+	escaped := url.QueryEscape(s)
+	return template.URL(escaped)
+}
+
+// dict creates a map from key-value pairs.
+func dict(pairs ...any) (map[string]any, error) {
+	if len(pairs)%2 != 0 {
+		return nil, fmt.Errorf("misaligned dict parameters, must be even number of parameters")
+	}
+
+	d := make(map[string]any, len(pairs)/2)
+
+	for i := 0; i < len(pairs); i += 2 {
+		key, ok := pairs[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid dict key type, must be string, got %T", pairs[i])
+		}
+		d[key] = pairs[i+1]
+	}
+
+	return d, nil
+}
+
+func inc(args ...any) any {
+	if len(args) == 0 {
+		return 1
+	}
+	switch v := args[0].(type) {
+	case int:
+		if len(args) > 1 {
+			if by, ok := args[1].(int); ok {
+				return v + by
+			}
+		}
+		return v + 1
+	case int64:
+		if len(args) > 1 {
+			if by, ok := args[1].(int64); ok {
+				return v + by
+			}
+		}
+		return v + 1
+	case float64:
+		if len(args) > 1 {
+			if by, ok := args[1].(float64); ok {
+				return v + by
+			}
+		}
+		return v + 1
+	case float32:
+		if len(args) > 1 {
+			if by, ok := args[1].(float32); ok {
+				return v + by
+			}
+		}
+		return v + 1
+	case uint:
+		if len(args) > 1 {
+			if by, ok := args[1].(uint); ok {
+				return v + by
+			}
+		}
+		return v + 1
+	}
+	return args[0]
+}
+
+func dec(args ...any) any {
+	if len(args) == 0 {
+		return -1
+	}
+	switch v := args[0].(type) {
+	case int:
+		if len(args) > 1 {
+			if by, ok := args[1].(int); ok {
+				return v - by
+			}
+		}
+		return v - 1
+	case int64:
+		if len(args) > 1 {
+			if by, ok := args[1].(int64); ok {
+				return v - by
+			}
+		}
+		return v - 1
+	case float64:
+		if len(args) > 1 {
+			if by, ok := args[1].(float64); ok {
+				return v - by
+			}
+		}
+		return v - 1
+	case float32:
+		if len(args) > 1 {
+			if by, ok := args[1].(float32); ok {
+				return v - by
+			}
+		}
+		return v - 1
+	case uint:
+		if len(args) > 1 {
+			if by, ok := args[1].(uint); ok {
+				return v - by
+			}
+		}
+		return v - 1
+	}
+	return args[0]
+}
+
 // formatDate formats the time with the layout.
 func formatDate(t time.Time, layout string) string {
 	return t.Format(layout)
@@ -162,9 +283,9 @@ func parseDate(layout, value string) (time.Time, error) {
 	return time.Parse(layout, value)
 }
 
-// debug returns the string representation of the value.
+// debug returns a pretty-printed string representation of the value, including nested structs and slices.
 func debug(v any) string {
-	return fmt.Sprintf("%+v", v)
+	return fmt.Sprintf("%#v", v)
 }
 
 func selectionFunc(p *Partial, data *Data) func() template.HTML {
