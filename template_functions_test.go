@@ -34,11 +34,11 @@ func TestTitle(t *testing.T) {
 		{"mañana", "Mañana"},
 		{"crème brûlée", "Crème Brûlée"},
 		// Test cases with non-Latin scripts
-		{"россия", "Россия"},                 // Russian (Cyrillic script)
-		{"中国", "中国"},                         // Chinese characters
-		{"こんにちは 世界", "こんにちは 世界"},             // Japanese (Hiragana and Kanji)
-		{"مرحبا بالعالم", "مرحبا بالعالم"},   // Arabic script
-		{"γειά σου κόσμε", "Γειά Σου Κόσμε"}, // Greek script
+		{"россия", "Россия"},                   // Russian (Cyrillic script)
+		{"中国", "中国"},                       // Chinese characters
+		{"こんにちは 世界", "こんにちは 世界"}, // Japanese (Hiragana and Kanji)
+		{"مرحبا بالعالم", "مرحبا بالعالم"},     // Arabic script
+		{"γειά σου κόσμε", "Γειά Σου Κόσμε"},   // Greek script
 		// Test cases with mixed scripts
 		{"hello 世界", "Hello 世界"},
 		{"こんにちは world", "こんにちは World"},
@@ -88,11 +88,11 @@ func TestUcFirst(t *testing.T) {
 		{"mañana", "Mañana"},
 		{"crème brûlée", "Crème brûlée"},
 		// Test cases with non-Latin scripts
-		{"россия", "Россия"},                 // Russian (Cyrillic script)
-		{"中国", "中国"},                         // Chinese characters
-		{"こんにちは 世界", "こんにちは 世界"},             // Japanese (Hiragana and Kanji)
-		{"مرحبا بالعالم", "مرحبا بالعالم"},   // Arabic script
-		{"γειά σου κόσμε", "Γειά σου κόσμε"}, // Greek script
+		{"россия", "Россия"},                   // Russian (Cyrillic script)
+		{"中国", "中国"},                       // Chinese characters
+		{"こんにちは 世界", "こんにちは 世界"}, // Japanese (Hiragana and Kanji)
+		{"مرحبا بالعالم", "مرحبا بالعالم"},     // Arabic script
+		{"γειά σου κόσμε", "Γειά σου κόσμε"},   // Greek script
 		// Test cases with mixed scripts
 		{"hello 世界", "Hello 世界"},
 		{"こんにちは world", "こんにちは world"},
@@ -233,7 +233,7 @@ func equalStringSlices(a, b []string) bool {
 
 func TestDebug(t *testing.T) {
 	input := map[string]any{"a": 1, "b": "test"}
-	expected := fmt.Sprintf("%+v", input)
+	expected := fmt.Sprintf("%#v", input)
 	output := debug(input)
 	if output != expected {
 		t.Errorf("debug(%v) = %q; want %q", input, output, expected)
