@@ -96,6 +96,8 @@ type (
 		Layout map[string]any
 		// GlobalData contains global data available to all partials
 		Global map[string]any
+		// Parent contains the parent partial's data
+		Parent map[string]any
 		// Loc contains the localizer
 		Loc Localizer
 		// Csrf contains the CSRF token
@@ -593,6 +595,18 @@ func (p *Partial) getServiceData() map[string]any {
 	return p.serviceData
 }
 
+func (p *Partial) getParentData() map[string]any {
+	if p.parent != nil {
+		// Create a copy of the parent's data to avoid mutations
+		parentData := make(map[string]any, len(p.parent.data))
+		for k, v := range p.parent.data {
+			parentData[k] = v
+		}
+		return parentData
+	}
+	return nil
+}
+
 func (p *Partial) getBasePath() string {
 	if p.parent != nil {
 		bp := p.parent.getBasePath()
@@ -795,6 +809,7 @@ func (p *Partial) renderSelf(ctx context.Context, r *http.Request) (template.HTM
 		Global:   p.getGlobalData(),
 		Service:  p.getServiceData(),
 		Layout:   p.getLayoutData(),
+		Parent:   p.getParentData(),
 		Loc:      getLocalizer(ctx),
 		Csrf:     getCsrfToken(ctx),
 	}
